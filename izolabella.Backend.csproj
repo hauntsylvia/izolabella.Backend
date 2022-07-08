@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+	  <Version>0.1.0</Version>
+	  <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+	  <Authors>izolabella</Authors>
+	  <Description>A package for creating a functioning backend.</Description>
+	  <PackageReadmeFile>README.md</PackageReadmeFile>
+	  <RepositoryType>github</RepositoryType>
+	  <RepositoryUrl>https://github.com/izolabella/izolabella.Backend</RepositoryUrl>
+	  <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+	  <PackageReleaseNotes>Initial push.</PackageReleaseNotes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\izolabella.Util\izolabella.Util.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Objects\Util\" />
+  </ItemGroup>
+
+</Project>
