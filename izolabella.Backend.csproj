@@ -17,11 +17,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="izolabella.Util" Version="1.1.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\izolabella.Util\izolabella.Util.csproj" />
   </ItemGroup>
 
   <ItemGroup>
