@@ -1,4 +1,6 @@
-﻿using izolabella.Backend.Objects.Structures.Controllers.Arguments;
+﻿using izolabella.Backend.Objects.Exceptions;
+using izolabella.Backend.Objects.Exceptions.Bases;
+using izolabella.Backend.Objects.Structures.Controllers.Arguments;
 using izolabella.Backend.Objects.Structures.Controllers.Bases;
 using izolabella.Backend.Objects.Structures.Controllers.Results;
 using izolabella.Backend.REST.Objects.ErrorMessages.Base;
@@ -20,25 +22,69 @@ namespace izolabella.Backend.REST.Objects.Listeners
         /// 
         /// </summary>
         /// <param name="Prefix">https://example.com:443/</param>
-        public IzolabellaServer(Uri Prefix, Controller? Self = null)
+        public IzolabellaServer(Uri[] Prefixes, Controller? Self = null, HttpMethod[]? MethodsSupported = null)
         {
-            this.HttpListener = new();
-            this.HttpListener.Prefixes.Add(Prefix.ToString());
-            this.HttpListener.IgnoreWriteExceptions = true;
-            this.controllers = Util.BaseImplementationUtil.GetItems<IzolabellaController>(Assembly.GetCallingAssembly());
-            this.Prefix = Prefix;
+            this.Methods = MethodsSupported ?? this.Methods;
+            foreach(Uri Prefix in Prefixes)
+            {
+                this.HttpListener.Prefixes.Add(Prefix.ToString());
+            }
+            this.Prefixes = Prefixes;
             this.Self = Self;
         }
 
-        public delegate Task OnErrorHandler(Exception Ex, IzolabellaController ThrownBy);
-        public event OnErrorHandler? OnError;
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="Prefix">https://example.com:443/</param>
+        public IzolabellaServer(Uri[] Prefixes, Controller? Self = null)
+        {
+            foreach(Uri Prefix in Prefixes)
+            {
+                this.HttpListener.Prefixes.Add(Prefix.ToString());
+            }
+            this.Prefixes = Prefixes;
+            this.Self = Self;
+        }
 
-        private readonly List<IzolabellaController> controllers;
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="Prefix">https://example.com:443/</param>
+        public IzolabellaServer(Uri[] Prefixes, Controller? Self = null, HttpMethod[]? MethodsSupported = null, Func<IzolabellaServerException, object?>? OnServerError = null)
+        {
+            this.Methods = MethodsSupported ?? this.Methods;
+            foreach (Uri Prefix in Prefixes)
+            {
+                this.HttpListener.Prefixes.Add(Prefix.ToString());
+            }
+            this.Prefixes = Prefixes;
+            this.Self = Self;
+            this.OnServerError = OnServerError;
+        }
+
+        public HttpMethod[] Methods { get; } = new[]
+        {
+            HttpMethod.Get,
+            HttpMethod.Post,
+            HttpMethod.Put,
+            HttpMethod.Patch
+        };
+
+        public delegate Task OnControllerErrorHandler(Exception Ex, IzolabellaController ThrownBy);
+        public event OnControllerErrorHandler? OnControllerError;
+
+        public Func<IzolabellaServerException, object?>? OnServerError { get; }
+
+        private readonly List<IzolabellaController> controllers = Util.BaseImplementationUtil.GetItems<IzolabellaController>(Assembly.GetCallingAssembly());
         public IReadOnlyList<IzolabellaController> Controllers => this.controllers;
 
-        public HttpListener HttpListener { get; }
+        public HttpListener HttpListener { get; } = new()
+        {
+            IgnoreWriteExceptions = true
+        };
 
-        public Uri Prefix { get; }
+        public Uri[] Prefixes { get; }
 
         public Controller? Self { get; }
 
@@ -47,17 +93,22 @@ namespace izolabella.Backend.REST.Objects.Listeners
             this.controllers.Add(Endpoint);
         }
 
-        private static async Task<IEnumerable<IzolabellaControllerArgument>> GetArgumentsForRequestAsync(HttpListenerContext Context)
+        private async Task<IzolabellaControllerArgument> GetArgumentsForRequestAsync(HttpListenerContext Context)
         {
-            List<IzolabellaControllerArgument> Args = new();
             if(Context.Request.InputStream.CanRead)
             {
                 using StreamReader ClientStreamReader = new(Context.Request.InputStream);
                 string R = await ClientStreamReader.ReadToEndAsync();
                 object? O = JsonConvert.DeserializeObject<object>(R);
-                Args.Add(new(R, O));
+                HttpMethod? Method = this.Methods.FirstOrDefault(M => M.Method.ToLower() == Context.Request.HttpMethod.ToLower());
+                return Method != null
+                    ? (new(R, O, Method))
+                    : throw new MethodNotSupportedException(Context.Request.HttpMethod);
             }
-            return Args;
+            else
+            {
+                throw new IncompatibleStreamException();
+            }
         }
 
         public Task StartListeningAsync()
@@ -75,17 +126,21 @@ namespace izolabella.Backend.REST.Objects.Listeners
                     {
                         if (Context.Response.OutputStream.CanWrite)
                         {
-                            IEnumerable<IzolabellaControllerArgument> Args = await GetArgumentsForRequestAsync(Context);
                             try
                             {
+                                IzolabellaControllerArgument Args = await this.GetArgumentsForRequestAsync(Context);
                                 IzolabellaAPIControllerResult Result = await Controller.RunAsync(Args);
                                 using StreamWriter StreamWriter = new(Context.Response.OutputStream);
                                 StreamWriter.Write(JsonConvert.SerializeObject(Result.Entity));
                             }
+                            catch (IzolabellaServerException Ex)
+                            {
+                                object Return = this.OnServerError?.Invoke(Ex) ?? Ex.Message;
+                            }
                             catch (Exception Ex)
                             {
                                 await Controller.OnErrorAsync(Ex);
-                                this.OnError?.Invoke(Ex, Controller);
+                                this.OnControllerError?.Invoke(Ex, Controller);
                             }
                         }
                     }

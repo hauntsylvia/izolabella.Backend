@@ -14,7 +14,7 @@ namespace izolabella.Backend.Objects.Structures.Controllers.Bases
 
         public virtual List<IzolabellaControllerParameter> Parameters { get; } = new();
 
-        public abstract Task<IzolabellaAPIControllerResult> RunAsync(IEnumerable<IzolabellaControllerArgument> Arguments);
+        public abstract Task<IzolabellaAPIControllerResult> RunAsync(IzolabellaControllerArgument Arguments);
 
         public virtual Task OnErrorAsync(Exception Ex)
         {

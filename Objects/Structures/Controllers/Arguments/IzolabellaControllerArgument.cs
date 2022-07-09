@@ -10,15 +10,18 @@ namespace izolabella.Backend.Objects.Structures.Controllers.Arguments
 {
     public class IzolabellaControllerArgument
     {
-        public IzolabellaControllerArgument(string? DefaultBody, object? Entity)
+        public IzolabellaControllerArgument(string? DefaultBody, object? Entity, HttpMethod Method)
         {
             this.DefaultBody = DefaultBody;
             this.Entity = Entity;
+            this.Method = Method;
         }
 
         private string? DefaultBody { get; }
 
         public object? Entity { get; }
+
+        public HttpMethod Method { get; }
 
         public Task<bool> TryParseAsync<T>(out T? Result)
         {
