@@ -60,35 +60,39 @@ namespace izolabella.Backend.REST.Objects.Listeners
             return Args;
         }
 
-        public async Task StartListeningAsync()
+        public Task StartListeningAsync()
         {
             this.HttpListener.Start();
-            this.Self?.Update("Server started!");
-            while (true)
+            this.Self?.Update($"{this.Controllers.Count} {(this.Controllers.Count == 1 ? "endpoint controller" : "endpoint controllers")} initialized.");
+            new Thread(async () =>
             {
-                HttpListenerContext Context = await this.HttpListener.GetContextAsync();
-                string? RouteTo = Context.Request.RawUrl?.Split('/', StringSplitOptions.RemoveEmptyEntries).ElementAtOrDefault(0);
-                IzolabellaController? Controller = this.Controllers.FirstOrDefault(C => C.Route.ToLower() == RouteTo?.ToLower());
-                if(Controller != null)
+                while (true)
                 {
-                    if (Context.Response.OutputStream.CanWrite)
+                    HttpListenerContext Context = await this.HttpListener.GetContextAsync();
+                    string? RouteTo = Context.Request.RawUrl?.Split('/', StringSplitOptions.RemoveEmptyEntries).ElementAtOrDefault(0);
+                    IzolabellaController? Controller = this.Controllers.FirstOrDefault(C => C.Route.ToLower() == RouteTo?.ToLower());
+                    if (Controller != null)
                     {
-                        IEnumerable<IzolabellaControllerArgument> Args = await GetArgumentsForRequestAsync(Context);
-                        try
+                        if (Context.Response.OutputStream.CanWrite)
                         {
-                            IzolabellaAPIControllerResult Result = await Controller.RunAsync(Args);
-                            using StreamWriter StreamWriter = new(Context.Response.OutputStream);
-                            StreamWriter.Write(JsonConvert.SerializeObject(Result.Entity));
-                        }
-                        catch(Exception Ex)
-                        {
-                            await Controller.OnErrorAsync(Ex);
-                            this.OnError?.Invoke(Ex, Controller);
+                            IEnumerable<IzolabellaControllerArgument> Args = await GetArgumentsForRequestAsync(Context);
+                            try
+                            {
+                                IzolabellaAPIControllerResult Result = await Controller.RunAsync(Args);
+                                using StreamWriter StreamWriter = new(Context.Response.OutputStream);
+                                StreamWriter.Write(JsonConvert.SerializeObject(Result.Entity));
+                            }
+                            catch (Exception Ex)
+                            {
+                                await Controller.OnErrorAsync(Ex);
+                                this.OnError?.Invoke(Ex, Controller);
+                            }
                         }
                     }
+                    Context.Response.OutputStream.Dispose();
                 }
-                Context.Response.OutputStream.Dispose();
-            }
+            }).Start();
+            return Task.CompletedTask;
         }
 
         public Task StopListening()
