@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace izolabella.Backend.REST.Objects.Structures.Controllers
+namespace izolabella.Backend.Objects.Structures.Controllers.Results
 {
     public class IzolabellaAPIControllerResult
     {
@@ -13,11 +13,11 @@ namespace izolabella.Backend.REST.Objects.Structures.Controllers
         {
         }
 
-        public IzolabellaAPIControllerResult(IDataStoreEntity? Entity)
+        public IzolabellaAPIControllerResult(object? Entity)
         {
             this.Entity = Entity;
         }
 
-        public IDataStoreEntity? Entity { get; }
+        public object? Entity { get; }
     }
 }

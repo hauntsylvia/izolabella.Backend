@@ -1,10 +1,14 @@
-﻿using izolabella.Backend.REST.Objects.ErrorMessages.Base;
-using izolabella.Backend.REST.Objects.Structures.Controllers;
+﻿using izolabella.Backend.Objects.Structures.Controllers.Arguments;
+using izolabella.Backend.Objects.Structures.Controllers.Bases;
+using izolabella.Backend.Objects.Structures.Controllers.Results;
+using izolabella.Backend.REST.Objects.ErrorMessages.Base;
+using izolabella.Util.Controllers;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -16,42 +20,71 @@ namespace izolabella.Backend.REST.Objects.Listeners
         /// 
         /// </summary>
         /// <param name="Prefix">https://example.com:443/</param>
-        public IzolabellaServer(Uri Prefix)
+        public IzolabellaServer(Uri Prefix, Controller? Self = null)
         {
             this.HttpListener = new();
             this.HttpListener.Prefixes.Add(Prefix.ToString());
             this.HttpListener.IgnoreWriteExceptions = true;
-            this.endpoints = izolabella.Util.BaseImplementationUtil.GetItems<IzolabellaAPIController>();
+            this.controllers = Util.BaseImplementationUtil.GetItems<IzolabellaController>(Assembly.GetCallingAssembly());
             this.Prefix = Prefix;
+            this.Self = Self;
         }
 
-        private readonly List<IzolabellaAPIController> endpoints;
-        public IReadOnlyList<IzolabellaAPIController> Endpoints => this.endpoints;
+        public delegate Task OnErrorHandler(Exception Ex, IzolabellaController ThrownBy);
+        public event OnErrorHandler? OnError;
+
+        private readonly List<IzolabellaController> controllers;
+        public IReadOnlyList<IzolabellaController> Controllers => this.controllers;
 
         public HttpListener HttpListener { get; }
 
         public Uri Prefix { get; }
 
-        public void AddEndpoint(IzolabellaAPIController Endpoint)
+        public Controller? Self { get; }
+
+        public void AddEndpoint(IzolabellaController Endpoint)
         {
-            this.endpoints.Add(Endpoint);
+            this.controllers.Add(Endpoint);
+        }
+
+        private static async Task<IEnumerable<IzolabellaControllerArgument>> GetArgumentsForRequestAsync(HttpListenerContext Context)
+        {
+            List<IzolabellaControllerArgument> Args = new();
+            if(Context.Request.InputStream.CanRead)
+            {
+                using StreamReader ClientStreamReader = new(Context.Request.InputStream);
+                string R = await ClientStreamReader.ReadToEndAsync();
+                object? O = JsonConvert.DeserializeObject<object>(R);
+                Args.Add(new(R, O));
+            }
+            return Args;
         }
 
         public async Task StartListeningAsync()
         {
             this.HttpListener.Start();
+            this.Self?.Update("Server started!");
             while (true)
             {
                 HttpListenerContext Context = await this.HttpListener.GetContextAsync();
-                string? RouteTo = Context.Request.RawUrl?.Split('/').ElementAtOrDefault(3);
-                Task<IzolabellaAPIControllerResult>? Response = this.Endpoints.FirstOrDefault(C => C.Route.ToLower() == RouteTo?.ToLower())?.RunAsync();
-                if(Response != null)
+                string? RouteTo = Context.Request.RawUrl?.Split('/', StringSplitOptions.RemoveEmptyEntries).ElementAtOrDefault(0);
+                IzolabellaController? Controller = this.Controllers.FirstOrDefault(C => C.Route.ToLower() == RouteTo?.ToLower());
+                if(Controller != null)
                 {
-                    IzolabellaAPIControllerResult Result = await Response;
                     if (Context.Response.OutputStream.CanWrite)
                     {
-                        using StreamWriter StreamWriter = new(Context.Response.OutputStream);
-                        StreamWriter.Write(JsonConvert.SerializeObject(Result.Entity));
+                        IEnumerable<IzolabellaControllerArgument> Args = await GetArgumentsForRequestAsync(Context);
+                        try
+                        {
+                            IzolabellaAPIControllerResult Result = await Controller.RunAsync(Args);
+                            using StreamWriter StreamWriter = new(Context.Response.OutputStream);
+                            StreamWriter.Write(JsonConvert.SerializeObject(Result.Entity));
+                        }
+                        catch(Exception Ex)
+                        {
+                            await Controller.OnErrorAsync(Ex);
+                            this.OnError?.Invoke(Ex, Controller);
+                        }
                     }
                 }
                 Context.Response.OutputStream.Dispose();
