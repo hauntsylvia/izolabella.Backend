@@ -14,7 +14,14 @@
 	  <RepositoryUrl>https://github.com/izolabella/izolabella.Backend</RepositoryUrl>
 	  <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
 	  <PackageReleaseNotes>Initial push.</PackageReleaseNotes>
+	  <AnalysisLevel>latest-recommended</AnalysisLevel>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Objects\Util\**" />
+    <EmbeddedResource Remove="Objects\Util\**" />
+    <None Remove="Objects\Util\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="izolabella.Util" Version="1.1.0" />
@@ -26,10 +33,6 @@
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Objects\Util\" />
   </ItemGroup>
 
 </Project>

@@ -8,6 +8,7 @@ using izolabella.Util.Controllers;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Reflection;
@@ -100,7 +101,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
                 using StreamReader ClientStreamReader = new(Context.Request.InputStream);
                 string R = await ClientStreamReader.ReadToEndAsync();
                 object? O = JsonConvert.DeserializeObject<object>(R);
-                HttpMethod? Method = this.Methods.FirstOrDefault(M => M.Method.ToLower() == Context.Request.HttpMethod.ToLower());
+                HttpMethod? Method = this.Methods.FirstOrDefault(M => M.Method.ToLower(CultureInfo.InvariantCulture) == Context.Request.HttpMethod.ToLower(CultureInfo.InvariantCulture));
                 return Method != null
                     ? (new(R, O, Method))
                     : throw new MethodNotSupportedException(Context.Request.HttpMethod);
@@ -121,7 +122,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
                 {
                     HttpListenerContext Context = await this.HttpListener.GetContextAsync();
                     string? RouteTo = Context.Request.RawUrl?.Split('/', StringSplitOptions.RemoveEmptyEntries).ElementAtOrDefault(0);
-                    IzolabellaController? Controller = this.Controllers.FirstOrDefault(C => C.Route.ToLower() == RouteTo?.ToLower());
+                    IzolabellaController? Controller = this.Controllers.FirstOrDefault(C => C.Route.ToLower(CultureInfo.InvariantCulture) == RouteTo?.ToLower(CultureInfo.InvariantCulture));
                     if (Controller != null)
                     {
                         if (Context.Response.OutputStream.CanWrite)
