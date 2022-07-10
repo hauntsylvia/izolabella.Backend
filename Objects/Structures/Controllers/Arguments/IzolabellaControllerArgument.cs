@@ -25,7 +25,7 @@ namespace izolabella.Backend.Objects.Structures.Controllers.Arguments
 
         public Task<bool> TryParseAsync<T>(out T? Result)
         {
-            Result = JsonConvert.DeserializeObject<T>(DefaultBody ?? string.Empty);
+            Result = JsonConvert.DeserializeObject<T>(this.DefaultBody ?? string.Empty);
             return Task.FromResult(Result != null);
         }
 
@@ -33,7 +33,7 @@ namespace izolabella.Backend.Objects.Structures.Controllers.Arguments
         {
             try
             {
-                Result = DefaultBody != null && DefaultBody.Length > 0 ? JsonConvert.DeserializeObject<T>(DefaultBody) : default;
+                Result = this.DefaultBody != null && this.DefaultBody.Length > 0 ? JsonConvert.DeserializeObject<T>(this.DefaultBody) : default;
             }
             catch
             {

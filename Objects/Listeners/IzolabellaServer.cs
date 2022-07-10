@@ -25,10 +25,10 @@ namespace izolabella.Backend.REST.Objects.Listeners
         /// <param name="Prefix">https://example.com:443/</param>
         public IzolabellaServer(Uri[] Prefixes, Controller? Self = null, HttpMethod[]? MethodsSupported = null)
         {
-            Methods = MethodsSupported ?? Methods;
+            this.Methods = MethodsSupported ?? this.Methods;
             foreach(Uri Prefix in Prefixes)
             {
-                HttpListener.Prefixes.Add(Prefix.ToString());
+                this.HttpListener.Prefixes.Add(Prefix.ToString());
             }
             this.Prefixes = Prefixes;
             this.Self = Self;
@@ -42,7 +42,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
         {
             foreach(Uri Prefix in Prefixes)
             {
-                HttpListener.Prefixes.Add(Prefix.ToString());
+                this.HttpListener.Prefixes.Add(Prefix.ToString());
             }
             this.Prefixes = Prefixes;
             this.Self = Self;
@@ -54,10 +54,10 @@ namespace izolabella.Backend.REST.Objects.Listeners
         /// <param name="Prefix">https://example.com:443/</param>
         public IzolabellaServer(Uri[] Prefixes, Controller? Self = null, HttpMethod[]? MethodsSupported = null, Func<IzolabellaServerException, object?>? OnServerError = null)
         {
-            Methods = MethodsSupported ?? Methods;
+            this.Methods = MethodsSupported ?? this.Methods;
             foreach (Uri Prefix in Prefixes)
             {
-                HttpListener.Prefixes.Add(Prefix.ToString());
+                this.HttpListener.Prefixes.Add(Prefix.ToString());
             }
             this.Prefixes = Prefixes;
             this.Self = Self;
@@ -78,7 +78,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
         public Func<IzolabellaServerException, object?>? OnServerError { get; }
 
         private readonly List<IzolabellaController> controllers = Util.BaseImplementationUtil.GetItems<IzolabellaController>(Assembly.GetCallingAssembly());
-        public IReadOnlyList<IzolabellaController> Controllers => controllers;
+        public IReadOnlyList<IzolabellaController> Controllers => this.controllers;
 
         public HttpListener HttpListener { get; } = new()
         {
@@ -91,7 +91,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
 
         public void AddEndpoint(IzolabellaController Endpoint)
         {
-            controllers.Add(Endpoint);
+            this.controllers.Add(Endpoint);
         }
 
         private async Task<IzolabellaControllerArgument> GetArgumentsForRequestAsync(HttpListenerContext Context)
@@ -101,7 +101,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
                 using StreamReader ClientStreamReader = new(Context.Request.InputStream);
                 string R = await ClientStreamReader.ReadToEndAsync();
                 object? O = JsonConvert.DeserializeObject<object>(R);
-                HttpMethod? Method = Methods.FirstOrDefault(M => M.Method.ToLower(CultureInfo.InvariantCulture) == Context.Request.HttpMethod.ToLower(CultureInfo.InvariantCulture));
+                HttpMethod? Method = this.Methods.FirstOrDefault(M => M.Method.ToLower(CultureInfo.InvariantCulture) == Context.Request.HttpMethod.ToLower(CultureInfo.InvariantCulture));
                 return Method != null
                     ? (new(R, O, Method))
                     : throw new MethodNotSupportedException(Context.Request.HttpMethod);
@@ -114,29 +114,29 @@ namespace izolabella.Backend.REST.Objects.Listeners
 
         public Task StartListeningAsync()
         {
-            HttpListener.Start();
-            Self?.Update($"{Controllers.Count} {(Controllers.Count == 1 ? "endpoint controller" : "endpoint controllers")} initialized.");
+            this.HttpListener.Start();
+            this.Self?.Update($"{this.Controllers.Count} {(this.Controllers.Count == 1 ? "endpoint controller" : "endpoint controllers")} initialized.");
             new Thread(async () =>
             {
                 while (true)
                 {
-                    HttpListenerContext Context = await HttpListener.GetContextAsync();
+                    HttpListenerContext Context = await this.HttpListener.GetContextAsync();
                     string? RouteTo = Context.Request.RawUrl?.Split('/', StringSplitOptions.RemoveEmptyEntries).ElementAtOrDefault(0);
-                    IzolabellaController? Controller = Controllers.FirstOrDefault(C => C.Route.ToLower(CultureInfo.InvariantCulture) == RouteTo?.ToLower(CultureInfo.InvariantCulture));
+                    IzolabellaController? Controller = this.Controllers.FirstOrDefault(C => C.Route.ToLower(CultureInfo.InvariantCulture) == RouteTo?.ToLower(CultureInfo.InvariantCulture));
                     if (Controller != null)
                     {
                         if (Context.Response.OutputStream.CanWrite)
                         {
                             try
                             {
-                                IzolabellaControllerArgument Args = await GetArgumentsForRequestAsync(Context);
+                                IzolabellaControllerArgument Args = await this.GetArgumentsForRequestAsync(Context);
                                 IzolabellaAPIControllerResult Result = await Controller.RunAsync(Args);
                                 using StreamWriter StreamWriter = new(Context.Response.OutputStream);
                                 StreamWriter.Write(JsonConvert.SerializeObject(Result.Entity));
                             }
                             catch (IzolabellaServerException Ex)
                             {
-                                object Return = OnServerError?.Invoke(Ex) ?? Ex.Message;
+                                object Return = this.OnServerError?.Invoke(Ex) ?? Ex.Message;
                             }
                             catch (Exception Ex)
                             {
@@ -153,7 +153,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
 
         public Task StopListening()
         {
-            HttpListener.Stop();
+            this.HttpListener.Stop();
             return Task.CompletedTask;
         }
     }
