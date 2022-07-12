@@ -1,4 +1,6 @@
-﻿using izolabella.Storage.Objects.Structures;
+﻿using izolabella.Backend.Objects.Structures.Controllers.Bases;
+using izolabella.Backend.REST.Objects.Listeners;
+using izolabella.Storage.Objects.Structures;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -10,12 +12,15 @@ namespace izolabella.Backend.Objects.Structures.Controllers.Arguments
 {
     public class IzolabellaControllerArgument
     {
-        public IzolabellaControllerArgument(string? DefaultBody, object? Entity, HttpMethod Method)
+        public IzolabellaControllerArgument(IzolabellaServer Server, string? DefaultBody, object? Entity, HttpMethod Method)
         {
+            this.Server = Server;
             this.DefaultBody = DefaultBody;
             this.Entity = Entity;
             this.Method = Method;
         }
+
+        public IzolabellaServer Server { get; }
 
         private string? DefaultBody { get; }
 

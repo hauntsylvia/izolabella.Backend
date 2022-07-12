@@ -23,10 +23,11 @@ namespace izolabella.Backend.REST.Objects.Listeners
         /// 
         /// </summary>
         /// <param name="Prefix">https://example.com:443/</param>
-        public IzolabellaServer(Uri[] Prefixes, Controller? Self = null, HttpMethod[]? MethodsSupported = null)
+        public IzolabellaServer(Uri[] Prefixes, Controller? Self = null, HttpMethod[]? MethodsSupported = null, Assembly[]? AssembliesToLoadFrom = null)
         {
             this.Methods = MethodsSupported ?? this.Methods;
-            foreach(Uri Prefix in Prefixes)
+            this.assembliesToLoadFrom = AssembliesToLoadFrom;
+            foreach (Uri Prefix in Prefixes)
             {
                 this.HttpListener.Prefixes.Add(Prefix.ToString());
             }
@@ -72,13 +73,16 @@ namespace izolabella.Backend.REST.Objects.Listeners
             HttpMethod.Patch
         };
 
+        private Assembly[]? assembliesToLoadFrom;
+
+        public Assembly[] AssembliesToLoadFrom { get => this.assembliesToLoadFrom ?? new Assembly[] { Assembly.GetCallingAssembly() }; set => this.assembliesToLoadFrom = value; }
+
         public delegate Task OnControllerErrorHandler(Exception Ex, IzolabellaController ThrownBy);
         public event OnControllerErrorHandler? OnControllerError;
 
         public Func<IzolabellaServerException, object?>? OnServerError { get; }
 
-        private readonly List<IzolabellaController> controllers = Util.BaseImplementationUtil.GetItems<IzolabellaController>(Assembly.GetCallingAssembly());
-        public IReadOnlyList<IzolabellaController> Controllers => this.controllers;
+        public IReadOnlyList<IzolabellaController> Controllers => Util.BaseImplementationUtil.GetItems<IzolabellaController>(this.AssembliesToLoadFrom);
 
         public HttpListener HttpListener { get; } = new()
         {
@@ -89,11 +93,6 @@ namespace izolabella.Backend.REST.Objects.Listeners
 
         public Controller? Self { get; }
 
-        public void AddEndpoint(IzolabellaController Endpoint)
-        {
-            this.controllers.Add(Endpoint);
-        }
-
         private async Task<IzolabellaControllerArgument> GetArgumentsForRequestAsync(HttpListenerContext Context)
         {
             if(Context.Request.InputStream.CanRead)
@@ -103,7 +102,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
                 object? O = JsonConvert.DeserializeObject<object>(R);
                 HttpMethod? Method = this.Methods.FirstOrDefault(M => M.Method.ToLower(CultureInfo.InvariantCulture) == Context.Request.HttpMethod.ToLower(CultureInfo.InvariantCulture));
                 return Method != null
-                    ? (new(R, O, Method))
+                    ? (new(this, R, O, Method))
                     : throw new MethodNotSupportedException(Context.Request.HttpMethod);
             }
             else
