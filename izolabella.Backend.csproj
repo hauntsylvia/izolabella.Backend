@@ -12,9 +12,17 @@
 	  <PackageReadmeFile>README.md</PackageReadmeFile>
 	  <RepositoryType>github</RepositoryType>
 	  <RepositoryUrl>https://github.com/izolabella/izolabella.Backend</RepositoryUrl>
-	  <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+	  <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
 	  <PackageReleaseNotes>Initial push.</PackageReleaseNotes>
 	  <AnalysisLevel>latest-recommended</AnalysisLevel>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
 
   <ItemGroup>

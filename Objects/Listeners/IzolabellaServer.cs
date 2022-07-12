@@ -86,7 +86,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
 
         public HttpListener HttpListener { get; } = new()
         {
-            IgnoreWriteExceptions = true
+            IgnoreWriteExceptions = false
         };
 
         public Uri[] Prefixes { get; }
@@ -113,15 +113,18 @@ namespace izolabella.Backend.REST.Objects.Listeners
 
         public Task StartListeningAsync()
         {
-            this.HttpListener.Start();
-            this.Self?.Update($"{this.Controllers.Count} {(this.Controllers.Count == 1 ? "endpoint controller" : "endpoint controllers")} initialized.");
             new Thread(async () =>
             {
+                this.HttpListener.Start();
+                this.Self?.Update($"Listening on:\n{string.Join("\n", this.Prefixes.Select(P => P.Host + " - port " + P.Port.ToString()))}");
+                this.Self?.Update($"{this.Controllers.Count} {(this.Controllers.Count == 1 ? "endpoint controller" : "endpoint controllers")} initialized:\n{String.Join("\n", this.Controllers.Select(C => "/" + C.Route))}");
+
                 while (true)
                 {
                     HttpListenerContext Context = await this.HttpListener.GetContextAsync();
                     string? RouteTo = Context.Request.RawUrl?.Split('/', StringSplitOptions.RemoveEmptyEntries).ElementAtOrDefault(0);
                     IzolabellaController? Controller = this.Controllers.FirstOrDefault(C => C.Route.ToLower(CultureInfo.InvariantCulture) == RouteTo?.ToLower(CultureInfo.InvariantCulture));
+                    this.Self?.Update("AAA");
                     if (Controller != null)
                     {
                         if (Context.Response.OutputStream.CanWrite)
@@ -142,8 +145,21 @@ namespace izolabella.Backend.REST.Objects.Listeners
                                 await Controller.OnErrorAsync(Ex);
                                 OnControllerError?.Invoke(Ex, Controller);
                             }
+                            finally
+                            {
+                                this.Self?.Update("Try-Catch finally hit.");
+                            }
+                        }
+                        else
+                        {
+                            this.Self?.Update("Stream not writeable.");
                         }
                     }
+                    else
+                    {
+                        this.Self?.Update("404 hit.");
+                    }
+                    Context.Response.OutputStream.Close();
                     Context.Response.OutputStream.Dispose();
                 }
             }).Start();
