@@ -23,7 +23,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
         /// 
         /// </summary>
         /// <param name="Prefix">https://example.com:443/</param>
-        public IzolabellaServer(Uri[] Prefixes, Controller? Self = null, HttpMethod[]? MethodsSupported = null, Assembly[]? AssembliesToLoadFrom = null)
+        public IzolabellaServer(Uri[] Prefixes, Controller? Self = null, HttpMethod[]? MethodsSupported = null, Assembly?[]? AssembliesToLoadFrom = null)
         {
             this.Methods = MethodsSupported ?? this.Methods;
             this.assembliesToLoadFrom = AssembliesToLoadFrom;
@@ -73,9 +73,9 @@ namespace izolabella.Backend.REST.Objects.Listeners
             HttpMethod.Patch
         };
 
-        private Assembly[]? assembliesToLoadFrom;
+        private Assembly?[]? assembliesToLoadFrom;
 
-        public Assembly[] AssembliesToLoadFrom { get => this.assembliesToLoadFrom ?? new Assembly[] { Assembly.GetCallingAssembly() }; set => this.assembliesToLoadFrom = value; }
+        public Assembly?[] AssembliesToLoadFrom { get => this.assembliesToLoadFrom ?? new Assembly?[] { Assembly.GetEntryAssembly(), Assembly.GetExecutingAssembly(), Assembly.GetCallingAssembly() }; set => this.assembliesToLoadFrom = value; }
 
         public delegate Task OnControllerErrorHandler(Exception Ex, IzolabellaController ThrownBy);
         public event OnControllerErrorHandler? OnControllerError;
