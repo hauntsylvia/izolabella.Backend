@@ -113,12 +113,12 @@ namespace izolabella.Backend.REST.Objects.Listeners
 
         public Task StartListeningAsync()
         {
+            this.HttpListener.Start();
+            this.Self?.Update($"Listening on: {string.Join(", ", this.Prefixes.Select(P => P.Host + " - port " + P.Port.ToString()))}");
+            this.Self?.Update($"{this.Controllers.Count} {(this.Controllers.Count == 1 ? "endpoint controller" : "endpoint controllers")} initialized: {String.Join(", ", this.Controllers.Select(C => "/" + C.Route))}");
+
             new Thread(async () =>
             {
-                this.HttpListener.Start();
-                this.Self?.Update($"Listening on:\n{string.Join("\n", this.Prefixes.Select(P => P.Host + " - port " + P.Port.ToString()))}");
-                this.Self?.Update($"{this.Controllers.Count} {(this.Controllers.Count == 1 ? "endpoint controller" : "endpoint controllers")} initialized:\n{String.Join("\n", this.Controllers.Select(C => "/" + C.Route))}");
-
                 while (true)
                 {
                     HttpListenerContext Context = await this.HttpListener.GetContextAsync();
