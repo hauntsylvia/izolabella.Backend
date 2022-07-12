@@ -18,6 +18,13 @@ namespace izolabella.Backend.Objects.Structures.Controllers.Results
             this.Entity = Entity;
         }
 
+        public IzolabellaAPIControllerResult(byte[]? Bytes)
+        {
+            this.Bytes = Bytes;
+        }
+
         public object? Entity { get; }
+
+        public byte[]? Bytes { get; }
     }
 }

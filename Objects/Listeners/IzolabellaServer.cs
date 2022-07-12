@@ -102,7 +102,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
                 object? O = JsonConvert.DeserializeObject<object>(R);
                 HttpMethod? Method = this.Methods.FirstOrDefault(M => M.Method.ToLower(CultureInfo.InvariantCulture) == Context.Request.HttpMethod.ToLower(CultureInfo.InvariantCulture));
                 return Method != null
-                    ? (new(this, R, O, Method))
+                    ? new IzolabellaControllerArgument(this, R, O, Method, Context.Request.Url?.Segments.LastOrDefault() ?? String.Empty, Context.Request.Url)
                     : throw new MethodNotSupportedException(Context.Request.HttpMethod);
             }
             else
@@ -114,7 +114,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
         public Task StartListeningAsync()
         {
             this.HttpListener.Start();
-            this.Self?.Update($"Listening on: {string.Join(", ", this.Prefixes.Select(P => P.Host + " - port " + P.Port.ToString()))}");
+            this.Self?.Update($"Listening on: {string.Join(", ", this.Prefixes.Select(P => P.Host + " - port " + P.Port.ToString(CultureInfo.InvariantCulture)))}");
             this.Self?.Update($"{this.Controllers.Count} {(this.Controllers.Count == 1 ? "endpoint controller" : "endpoint controllers")} initialized: {String.Join(", ", this.Controllers.Select(C => "/" + C.Route))}");
 
             new Thread(async () =>
@@ -123,8 +123,8 @@ namespace izolabella.Backend.REST.Objects.Listeners
                 {
                     HttpListenerContext Context = await this.HttpListener.GetContextAsync();
                     string? RouteTo = Context.Request.RawUrl?.Split('/', StringSplitOptions.RemoveEmptyEntries).ElementAtOrDefault(0);
-                    IzolabellaController? Controller = this.Controllers.FirstOrDefault(C => C.Route.ToLower(CultureInfo.InvariantCulture) == RouteTo?.ToLower(CultureInfo.InvariantCulture));
-                    this.Self?.Update("AAA");
+                    IzolabellaController? Controller = this.Controllers
+                    .FirstOrDefault(C => C.Route.ToLower(CultureInfo.InvariantCulture) == RouteTo?.ToLower(CultureInfo.InvariantCulture));
                     if (Controller != null)
                     {
                         if (Context.Response.OutputStream.CanWrite)
@@ -134,7 +134,14 @@ namespace izolabella.Backend.REST.Objects.Listeners
                                 IzolabellaControllerArgument Args = await this.GetArgumentsForRequestAsync(Context);
                                 IzolabellaAPIControllerResult Result = await Controller.RunAsync(Args);
                                 using StreamWriter StreamWriter = new(Context.Response.OutputStream);
-                                StreamWriter.Write(JsonConvert.SerializeObject(Result.Entity));
+                                if(Result.Entity == null && Result.Bytes != null)
+                                {
+                                    StreamWriter.BaseStream.Write(Result.Bytes);
+                                }
+                                else
+                                {
+                                    StreamWriter.Write(JsonConvert.SerializeObject(Result.Entity));
+                                }
                             }
                             catch (IzolabellaServerException Ex)
                             {
@@ -143,6 +150,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
                             catch (Exception Ex)
                             {
                                 await Controller.OnErrorAsync(Ex);
+                                this.Self?.Update(Ex.ToString());
                                 OnControllerError?.Invoke(Ex, Controller);
                             }
                             finally
