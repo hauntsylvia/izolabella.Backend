@@ -116,7 +116,6 @@ namespace izolabella.Backend.REST.Objects.Listeners
             this.HttpListener.Start();
             this.Self?.Update($"Listening on: {string.Join(", ", this.Prefixes.Select(P => P.Host + " - port " + P.Port.ToString(CultureInfo.InvariantCulture)))}");
             this.Self?.Update($"{this.Controllers.Count} {(this.Controllers.Count == 1 ? "endpoint controller" : "endpoint controllers")} initialized: {String.Join(", ", this.Controllers.Select(C => "/" + C.Route))}");
-
             new Thread(async () =>
             {
                 while (true)

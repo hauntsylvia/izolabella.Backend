@@ -12,7 +12,7 @@ namespace izolabella.Backend.Objects.Structures.Controllers.Arguments
 {
     public class IzolabellaControllerArgument
     {
-        public IzolabellaControllerArgument(IzolabellaServer Server, string? DefaultBody, object? Entity, HttpMethod Method, string WasInUri, Uri UriSent)
+        public IzolabellaControllerArgument(IzolabellaServer Server, string? DefaultBody, object? Entity, HttpMethod Method, string WasInUri, Uri? UriSent)
         {
             this.Server = Server;
             this.DefaultBody = DefaultBody;
@@ -32,7 +32,7 @@ namespace izolabella.Backend.Objects.Structures.Controllers.Arguments
 
         public string WasInUri { get; }
 
-        public Uri UriSent { get; }
+        public Uri? UriSent { get; }
 
         public Task<bool> TryParseAsync<T>(out T? Result)
         {
