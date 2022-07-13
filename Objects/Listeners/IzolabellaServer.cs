@@ -152,10 +152,6 @@ namespace izolabella.Backend.REST.Objects.Listeners
                                 this.Self?.Update(Ex.ToString());
                                 OnControllerError?.Invoke(Ex, Controller);
                             }
-                            finally
-                            {
-                                this.Self?.Update("Try-Catch finally hit.");
-                            }
                         }
                         else
                         {
