@@ -7,9 +7,14 @@ using Newtonsoft.Json;
 
 namespace izolabella.Backend.Objects.Structures.Backend
 {
-    public interface IUserCredentials
+    public class UserCredentials
     {
-        [JsonIgnore]
-        internal string Secret { get; }
+        public UserCredentials(string Secret)
+        {
+            this.Secret = Secret;
+        }
+
+        [JsonProperty("Inner")]
+        public string Secret { get; }
     }
 }

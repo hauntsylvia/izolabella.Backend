@@ -9,6 +9,7 @@ using izolabella.Util.Controllers;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -58,8 +59,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
         public IzolabellaServer(Uri[] Prefixes,
                                 Controller? Self = null,
                                 HttpMethod[]? MethodsSupported = null,
-                                Func<IzolabellaServerException, object?>? OnServerError = null,
-                                IUserAuthenticationModel<User>? AuthenticationModel = null)
+                                IUserAuthenticationModel? AuthenticationModel = null)
         {
             this.Methods = MethodsSupported ?? this.Methods;
             foreach (Uri Prefix in Prefixes)
@@ -68,7 +68,6 @@ namespace izolabella.Backend.REST.Objects.Listeners
             }
             this.Prefixes = Prefixes;
             this.Self = Self;
-            this.OnServerError = OnServerError;
             this.AuthenticationModel = AuthenticationModel;
         }
 
@@ -104,7 +103,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
         #region events
 
         public delegate Task OnControllerErrorHandler(Exception Ex, IzolabellaEndpoint ThrownBy);
-        public event OnControllerErrorHandler? OnControllerError;
+        public event OnControllerErrorHandler? OnEndpointError;
 
         public delegate Task OnEndpointCalledHandler(IzolabellaEndpoint Endpoint);
         public event OnEndpointCalledHandler? EndpointCalled;
@@ -118,13 +117,23 @@ namespace izolabella.Backend.REST.Objects.Listeners
         public delegate Task OnUserAuthenticatedHandler(User User);
         public event OnUserAuthenticatedHandler? UserSuccessfullyAuthenticated;
 
+        public delegate Task<User?> OnUserNullHandler(NameValueCollection Headers);
+        public event OnUserNullHandler? UserNeedsAuthentication;
+
+        public delegate Task OnServerStartedHandler();
+        public event OnServerStartedHandler? ServerStarted;
+
+        public delegate Task OnServerStoppedHandler();
+        public event OnServerStoppedHandler? ServerStopped;
+
+        public delegate Task OnServerFatalErrorHandler(Exception Ex);
+        public event OnServerFatalErrorHandler? ServerFatalError;
+
         #endregion
 
         #region user defined properties for configuring server
 
-        public Func<IzolabellaServerException, object?>? OnServerError { get; }
-
-        public IUserAuthenticationModel<User>? AuthenticationModel { get; set; }
+        public IUserAuthenticationModel? AuthenticationModel { get; set; }
 
         #endregion
 
@@ -160,11 +169,20 @@ namespace izolabella.Backend.REST.Objects.Listeners
             {
                 return null;
             }
-            User? Auth = await this.AuthenticationModel.AuthenticateUserAsync(Context.Request.Headers);
+            string? SecretFromHeaders = await this.AuthenticationModel.GetSecretFromHeadersAsync(Context.Request.Headers);
+            if(SecretFromHeaders == null)
+            {
+                return null;
+            }
+            User? Auth = await this.AuthenticationModel.AuthenticateUserAsync(SecretFromHeaders);
             if (Auth == null && this.AuthenticationModel.CreateUserIfAuthNull)
             {
-                Auth = await this.AuthenticationModel.CreateNewUserAsync(Context.Request.Headers);
+                Auth = await this.AuthenticationModel.CreateNewUserAsync(SecretFromHeaders);
                 this.UserCreated?.Invoke(Auth);
+            }
+            else if(!this.AuthenticationModel.CreateUserIfAuthNull)
+            {
+                Auth = await (this.UserNeedsAuthentication?.Invoke(Context.Request.Headers) ?? Task.FromResult<User?>(null));
             }
             else if (Auth != null)
             {
@@ -180,58 +198,62 @@ namespace izolabella.Backend.REST.Objects.Listeners
         public Task StartListeningAsync()
         {
             this.HttpListener.Start();
+            this.ServerStarted?.Invoke();
             this.Self?.Update($"Listening on: {string.Join(", ", this.Prefixes.Select(P => P.Host + " - port " + P.Port.ToString(CultureInfo.InvariantCulture)))}");
             this.Self?.Update($"{this.Controllers.Count} {(this.Controllers.Count == 1 ? "endpoint controller" : "endpoint controllers")} initialized: {String.Join(", ", this.Controllers.Select(C => "/" + C.Route))}");
-            new Thread(async () =>
+            new Task(async () =>
             {
-                while (true)
+                try
                 {
-                    HttpListenerContext Context = await this.HttpListener.GetContextAsync();
-                    string? RouteTo = Context.Request.RawUrl?.Split('/', StringSplitOptions.RemoveEmptyEntries).ElementAtOrDefault(0);
-                    IzolabellaEndpoint? Controller = this.Controllers
-                    .FirstOrDefault(C => C.Route.ToLower(CultureInfo.InvariantCulture) == RouteTo?.ToLower(CultureInfo.InvariantCulture));
-                    if (Controller != null)
+                    while (true)
                     {
-                        if (Context.Response.OutputStream.CanWrite)
+                        HttpListenerContext Context = await this.HttpListener.GetContextAsync().ConfigureAwait(false);
+                        string? RouteTo = Context.Request.RawUrl?.Split('/', StringSplitOptions.RemoveEmptyEntries).ElementAtOrDefault(0);
+                        IzolabellaEndpoint? Controller = this.Controllers
+                        .FirstOrDefault(C => C.Route.ToLower(CultureInfo.InvariantCulture) == RouteTo?.ToLower(CultureInfo.InvariantCulture));
+                        if (Controller != null)
                         {
-                            try
+                            if (Context.Response.OutputStream.CanWrite)
                             {
-                                IzolabellaControllerArgument Args = await this.GetArgumentsForRequestAsync(Context);
-                                IzolabellaAPIControllerResult Result = await Controller.RunAsync(Args);
-                                this.EndpointCalled?.Invoke(Controller);
-                                using StreamWriter StreamWriter = new(Context.Response.OutputStream);
-                                if(Result.Entity == null && Result.Bytes != null)
+                                try
                                 {
-                                    StreamWriter.BaseStream.Write(Result.Bytes);
+                                    IzolabellaControllerArgument Args = await this.GetArgumentsForRequestAsync(Context);
+                                    IzolabellaAPIControllerResult Result = await Controller.RunAsync(Args);
+                                    this.EndpointCalled?.Invoke(Controller);
+                                    using StreamWriter StreamWriter = new(Context.Response.OutputStream);
+                                    if (Result.Entity == null && Result.Bytes != null)
+                                    {
+                                        StreamWriter.BaseStream.Write(Result.Bytes);
+                                    }
+                                    else
+                                    {
+                                        StreamWriter.Write(JsonConvert.SerializeObject(Result.Entity));
+                                    }
                                 }
-                                else
+                                catch (Exception Ex)
                                 {
-                                    StreamWriter.Write(JsonConvert.SerializeObject(Result.Entity));
+                                    await Controller.OnErrorAsync(Ex);
+                                    this.Self?.Update(Ex.ToString());
+                                    OnEndpointError?.Invoke(Ex, Controller);
                                 }
                             }
-                            catch (IzolabellaServerException Ex)
+                            else
                             {
-                                object Return = this.OnServerError?.Invoke(Ex) ?? Ex.Message;
-                            }
-                            catch (Exception Ex)
-                            {
-                                await Controller.OnErrorAsync(Ex);
-                                this.Self?.Update(Ex.ToString());
-                                OnControllerError?.Invoke(Ex, Controller);
+                                this.Self?.Update("Stream not writeable.");
                             }
                         }
                         else
                         {
-                            this.Self?.Update("Stream not writeable.");
+                            this.EndpointNotFound?.Invoke();
+                            this.Self?.Update("No endpoint matching the given name sent was found.");
                         }
+                        Context.Response.OutputStream.Close();
+                        Context.Response.OutputStream.Dispose();
                     }
-                    else
-                    {
-                        this.EndpointNotFound?.Invoke();
-                        this.Self?.Update("No endpoint matching the given name sent was found.");
-                    }
-                    Context.Response.OutputStream.Close();
-                    Context.Response.OutputStream.Dispose();
+                }
+                catch(Exception Ex)
+                {
+                    this.ServerFatalError?.Invoke(Ex);
                 }
             }).Start();
             return Task.CompletedTask;
@@ -240,6 +262,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
         public Task StopListening()
         {
             this.HttpListener.Stop();
+            this.ServerStopped?.Invoke();
             return Task.CompletedTask;
         }
 

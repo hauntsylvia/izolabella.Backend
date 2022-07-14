@@ -7,11 +7,13 @@ using System.Threading.Tasks;
 
 namespace izolabella.Backend.Objects.Structures.Backend
 {
-    public interface IUserAuthenticationModel<TUser> where TUser : User
+    public interface IUserAuthenticationModel
     {
-        public Task<TUser> CreateNewUserAsync(NameValueCollection Headers);
+        public Task<string?> GetSecretFromHeadersAsync(NameValueCollection Headers);
 
-        public Task<TUser?> AuthenticateUserAsync(NameValueCollection Headers);
+        public Task<User> CreateNewUserAsync(string Secret);
+
+        public Task<User?> AuthenticateUserAsync(string Secret);
 
         public bool CreateUserIfAuthNull { get; }
     }

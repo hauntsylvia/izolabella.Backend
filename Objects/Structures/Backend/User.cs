@@ -10,7 +10,7 @@ namespace izolabella.Backend.Objects.Structures.Backend
     public class User
     {
         [JsonConstructor]
-        public User(string DisplayAlias, string Id, IUserCredentials Credentials)
+        public User(string DisplayAlias, string Id, UserCredentials Credentials)
         {
             this.DisplayAlias = DisplayAlias;
             this.Id = Id;
@@ -23,7 +23,7 @@ namespace izolabella.Backend.Objects.Structures.Backend
         [JsonProperty("Id")]
         public string Id { get; }
 
-        [JsonIgnore]
-        public IUserCredentials Credentials { get; }
+        [JsonProperty("Secret")]
+        public UserCredentials Credentials { get; }
     }
 }
