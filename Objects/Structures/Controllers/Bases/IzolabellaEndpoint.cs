@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace izolabella.Backend.Objects.Structures.Controllers.Bases
 {
-    public abstract class IzolabellaController
+    public abstract class IzolabellaEndpoint
     {
         public abstract string Route { get; }
 
