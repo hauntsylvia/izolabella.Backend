@@ -18,7 +18,7 @@ namespace izolabella.Backend.Objects.Structures.Backend
         }
 
         [JsonProperty("DisplayName")]
-        public string DisplayAlias { get; }
+        public string DisplayAlias { get; set; }
 
         [JsonProperty("Id")]
         public string Id { get; }

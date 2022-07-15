@@ -89,7 +89,8 @@ namespace izolabella.Backend.REST.Objects.Listeners
             HttpMethod.Get,
             HttpMethod.Post,
             HttpMethod.Put,
-            HttpMethod.Patch
+            HttpMethod.Patch,
+            HttpMethod.Options
         };
 
         public IReadOnlyList<IzolabellaEndpoint> Controllers => Util.BaseImplementationUtil.GetItems<IzolabellaEndpoint>(this.AssembliesToLoadFrom);
@@ -180,7 +181,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
                 Auth = await this.AuthenticationModel.CreateNewUserAsync(SecretFromHeaders);
                 this.UserCreated?.Invoke(Auth);
             }
-            else if(!this.AuthenticationModel.CreateUserIfAuthNull)
+            else if(Auth == null && !this.AuthenticationModel.CreateUserIfAuthNull)
             {
                 Auth = await (this.UserNeedsAuthentication?.Invoke(Context.Request.Headers) ?? Task.FromResult<User?>(null));
             }
@@ -208,6 +209,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
                     while (true)
                     {
                         HttpListenerContext Context = await this.HttpListener.GetContextAsync().ConfigureAwait(false);
+                        Context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
                         string? RouteTo = Context.Request.RawUrl?.Split('/', StringSplitOptions.RemoveEmptyEntries).ElementAtOrDefault(0);
                         IzolabellaEndpoint? Controller = this.Controllers
                         .FirstOrDefault(C => C.Route.ToLower(CultureInfo.InvariantCulture) == RouteTo?.ToLower(CultureInfo.InvariantCulture));
