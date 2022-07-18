@@ -77,12 +77,14 @@ namespace izolabella.Backend.REST.Objects.Listeners
 
         public HttpListener HttpListener { get; } = new()
         {
-            IgnoreWriteExceptions = false
+            IgnoreWriteExceptions = true
         };
 
         public Uri[] Prefixes { get; }
 
         public Controller? Self { get; }
+
+        public int MaxRetriesOnError { get; set; }
 
         public HttpMethod[] Methods { get; } = new[]
         {
@@ -98,6 +100,13 @@ namespace izolabella.Backend.REST.Objects.Listeners
         private Assembly?[]? assembliesToLoadFrom;
 
         public Assembly?[] AssembliesToLoadFrom { get => this.assembliesToLoadFrom ?? new Assembly?[] { Assembly.GetEntryAssembly(), Assembly.GetExecutingAssembly(), Assembly.GetCallingAssembly() }; set => this.assembliesToLoadFrom = value; }
+
+        #endregion
+
+        #region internal server properties
+
+        private bool StopServer { get; set; }
+        private List<Task> CurrentRequests { get; } = new();
 
         #endregion
 
@@ -194,7 +203,65 @@ namespace izolabella.Backend.REST.Objects.Listeners
 
         #endregion
 
-        #region start & stop
+        #region start, stop, while loop
+
+        public async Task ProcessRequestAsync(HttpListenerContext Context)
+        {
+            Context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+            string? RouteTo = Context.Request.RawUrl?.Split('/', StringSplitOptions.RemoveEmptyEntries).ElementAtOrDefault(0);
+            IzolabellaEndpoint? Controller = this.Controllers
+                .FirstOrDefault(C => C.Route.ToLower(CultureInfo.InvariantCulture) == RouteTo?.ToLower(CultureInfo.InvariantCulture));
+            if (Controller != null)
+            {
+                if (Context.Response.OutputStream.CanWrite)
+                {
+                    try
+                    {
+                        IzolabellaControllerArgument Args = await this.GetArgumentsForRequestAsync(Context);
+                        IzolabellaAPIControllerResult Result = await Controller.RunAsync(Args);
+                        this.EndpointCalled?.Invoke(Controller);
+                        using StreamWriter StreamWriter = new(Context.Response.OutputStream);
+                        if (Result.Entity == null && Result.Bytes != null)
+                        {
+                            StreamWriter.BaseStream.Write(Result.Bytes);
+                        }
+                        else
+                        {
+                            StreamWriter.Write(JsonConvert.SerializeObject(Result.Entity));
+                        }
+                    }
+                    catch (Exception Ex)
+                    {
+                        await Controller.OnErrorAsync(Ex);
+                        this.Self?.Update(Ex.ToString());
+                        OnEndpointError?.Invoke(Ex, Controller);
+                    }
+                }
+                else
+                {
+                    this.Self?.Update("Stream not writeable.");
+                }
+            }
+            else
+            {
+                this.EndpointNotFound?.Invoke();
+                this.Self?.Update("No endpoint matching the given name sent was found.");
+            }
+            Context.Response.OutputStream.Close();
+            Context.Response.OutputStream.Dispose();
+        }
+
+        public void ScheduleNextRequestAsync()
+        {
+            HttpListenerContext Context = this.HttpListener.GetContext();
+            Task RequestTask = this.ProcessRequestAsync(Context);
+            new Task(() =>
+            {
+                RequestTask.Wait();
+                this.CurrentRequests.Remove(RequestTask);
+            }).Start();
+            this.CurrentRequests.Add(RequestTask);
+        }
 
         public Task StartListeningAsync()
         {
@@ -202,70 +269,22 @@ namespace izolabella.Backend.REST.Objects.Listeners
             this.ServerStarted?.Invoke();
             this.Self?.Update($"Listening on: {string.Join(", ", this.Prefixes.Select(P => P.Host + " - port " + P.Port.ToString(CultureInfo.InvariantCulture)))}");
             this.Self?.Update($"{this.Controllers.Count} {(this.Controllers.Count == 1 ? "endpoint controller" : "endpoint controllers")} initialized: {String.Join(", ", this.Controllers.Select(C => "/" + C.Route))}");
-            new Task(async () =>
+            new Task(() =>
             {
-                try
+                while (!this.StopServer)
                 {
-                    while (true)
-                    {
-                        HttpListenerContext Context = await this.HttpListener.GetContextAsync().ConfigureAwait(false);
-                        Context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
-                        string? RouteTo = Context.Request.RawUrl?.Split('/', StringSplitOptions.RemoveEmptyEntries).ElementAtOrDefault(0);
-                        IzolabellaEndpoint? Controller = this.Controllers
-                        .FirstOrDefault(C => C.Route.ToLower(CultureInfo.InvariantCulture) == RouteTo?.ToLower(CultureInfo.InvariantCulture));
-                        if (Controller != null)
-                        {
-                            if (Context.Response.OutputStream.CanWrite)
-                            {
-                                try
-                                {
-                                    IzolabellaControllerArgument Args = await this.GetArgumentsForRequestAsync(Context);
-                                    IzolabellaAPIControllerResult Result = await Controller.RunAsync(Args);
-                                    this.EndpointCalled?.Invoke(Controller);
-                                    using StreamWriter StreamWriter = new(Context.Response.OutputStream);
-                                    if (Result.Entity == null && Result.Bytes != null)
-                                    {
-                                        StreamWriter.BaseStream.Write(Result.Bytes);
-                                    }
-                                    else
-                                    {
-                                        StreamWriter.Write(JsonConvert.SerializeObject(Result.Entity));
-                                    }
-                                }
-                                catch (Exception Ex)
-                                {
-                                    await Controller.OnErrorAsync(Ex);
-                                    this.Self?.Update(Ex.ToString());
-                                    OnEndpointError?.Invoke(Ex, Controller);
-                                }
-                            }
-                            else
-                            {
-                                this.Self?.Update("Stream not writeable.");
-                            }
-                        }
-                        else
-                        {
-                            this.EndpointNotFound?.Invoke();
-                            this.Self?.Update("No endpoint matching the given name sent was found.");
-                        }
-                        Context.Response.OutputStream.Close();
-                        Context.Response.OutputStream.Dispose();
-                    }
-                }
-                catch(Exception Ex)
-                {
-                    this.ServerFatalError?.Invoke(Ex);
+                    this.ScheduleNextRequestAsync();
                 }
             }).Start();
             return Task.CompletedTask;
         }
 
-        public Task StopListening()
+        public async Task StopListeningAsync()
         {
+            this.StopServer = true;
+            await Task.WhenAll(this.CurrentRequests);
             this.HttpListener.Stop();
             this.ServerStopped?.Invoke();
-            return Task.CompletedTask;
         }
 
         #endregion
