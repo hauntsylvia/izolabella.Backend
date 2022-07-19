@@ -136,8 +136,8 @@ namespace izolabella.Backend.REST.Objects.Listeners
         public delegate Task OnServerStoppedHandler();
         public event OnServerStoppedHandler? ServerStopped;
 
-        public delegate Task OnServerFatalErrorHandler(Exception Ex);
-        public event OnServerFatalErrorHandler? ServerFatalError;
+        //public delegate Task OnServerFatalErrorHandler(Exception Ex);
+        //public event OnServerFatalErrorHandler? ServerFatalError;
 
         #endregion
 
@@ -203,7 +203,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
 
         #endregion
 
-        #region start, stop, while loop
+        #region request
 
         public async Task ProcessRequestAsync(HttpListenerContext Context)
         {
@@ -262,6 +262,10 @@ namespace izolabella.Backend.REST.Objects.Listeners
             }).Start();
             this.CurrentRequests.Add(RequestTask);
         }
+
+        #endregion
+
+        #region start
 
         public Task StartListeningAsync()
         {

@@ -15,6 +15,7 @@
 	  <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
 	  <PackageReleaseNotes>Initial push.</PackageReleaseNotes>
 	  <AnalysisLevel>latest-recommended</AnalysisLevel>
+	  <EnableNETAnalyzers>True</EnableNETAnalyzers>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
