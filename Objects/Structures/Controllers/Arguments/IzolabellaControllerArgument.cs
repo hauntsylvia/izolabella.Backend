@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -13,9 +14,10 @@ namespace izolabella.Backend.Objects.Structures.Controllers.Arguments
 {
     public class IzolabellaControllerArgument
     {
-        public IzolabellaControllerArgument(IzolabellaServer Server, User? User, string? DefaultBody, object? Entity, HttpMethod Method, string WasInUri, Uri? UriSent)
+        public IzolabellaControllerArgument(IzolabellaServer Server, IPEndPoint From, User? User, string? DefaultBody, object? Entity, HttpMethod Method, string WasInUri, Uri? UriSent)
         {
             this.Server = Server;
+            this.From = From;
             this.User = User;
             this.DefaultBody = DefaultBody;
             this.Entity = Entity;
@@ -25,6 +27,8 @@ namespace izolabella.Backend.Objects.Structures.Controllers.Arguments
         }
 
         public IzolabellaServer Server { get; }
+
+        public IPEndPoint From { get; }
 
         public User? User { get; }
 
