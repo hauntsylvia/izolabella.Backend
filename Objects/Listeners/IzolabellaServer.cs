@@ -4,7 +4,6 @@ using izolabella.Backend.Objects.Structures.Backend;
 using izolabella.Backend.Objects.Structures.Controllers.Arguments;
 using izolabella.Backend.Objects.Structures.Controllers.Bases;
 using izolabella.Backend.Objects.Structures.Controllers.Results;
-using izolabella.Backend.REST.Objects.ErrorMessages.Base;
 using izolabella.Util.Controllers;
 using Newtonsoft.Json;
 using System;
@@ -17,7 +16,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace izolabella.Backend.REST.Objects.Listeners
+namespace izolabella.Backend.Objects.Listeners
 {
     public class IzolabellaServer
     {
@@ -44,7 +43,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
         /// <param name="Prefix">https://example.com:443/</param>
         public IzolabellaServer(Uri[] Prefixes, Controller? Self = null)
         {
-            foreach(Uri Prefix in Prefixes)
+            foreach (Uri Prefix in Prefixes)
             {
                 this.HttpListener.Prefixes.Add(Prefix.ToString());
             }
@@ -151,7 +150,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
 
         private async Task<IzolabellaControllerArgument> GetArgumentsForRequestAsync(HttpListenerContext Context)
         {
-            if(Context.Request.InputStream.CanRead)
+            if (Context.Request.InputStream.CanRead)
             {
                 using StreamReader ClientStreamReader = new(Context.Request.InputStream);
                 string R = await ClientStreamReader.ReadToEndAsync();
@@ -160,7 +159,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
                 if (Method != null)
                 {
                     User? U = await this.TryGetUserAsync(Context);
-                    return new IzolabellaControllerArgument(this, Context.Request.RemoteEndPoint, U, R, O, Method, Context.Request.Url?.Segments.LastOrDefault() ?? String.Empty, Context.Request.Url);
+                    return new IzolabellaControllerArgument(this, Context.Request.RemoteEndPoint, U, R, O, Method, Context.Request.Url?.Segments.LastOrDefault() ?? string.Empty, Context.Request.Url);
                 }
                 else
                 {
@@ -180,7 +179,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
                 return null;
             }
             string? SecretFromHeaders = await this.AuthenticationModel.GetSecretFromHeadersAsync(Context.Request.Headers);
-            if(SecretFromHeaders == null)
+            if (SecretFromHeaders == null)
             {
                 return null;
             }
@@ -190,7 +189,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
                 Auth = await this.AuthenticationModel.CreateNewUserAsync(SecretFromHeaders);
                 this.UserCreated?.Invoke(Auth);
             }
-            else if(Auth == null && !this.AuthenticationModel.CreateUserIfAuthNull)
+            else if (Auth == null && !this.AuthenticationModel.CreateUserIfAuthNull)
             {
                 Auth = await (this.UserNeedsAuthentication?.Invoke(Context.Request.Headers) ?? Task.FromResult<User?>(null));
             }
@@ -272,7 +271,7 @@ namespace izolabella.Backend.REST.Objects.Listeners
             this.HttpListener.Start();
             this.ServerStarted?.Invoke();
             this.Self?.Update($"Listening on: {string.Join(", ", this.Prefixes.Select(P => P.Host + " - port " + P.Port.ToString(CultureInfo.InvariantCulture)))}");
-            this.Self?.Update($"{this.Controllers.Count} {(this.Controllers.Count == 1 ? "endpoint controller" : "endpoint controllers")} initialized: {String.Join(", ", this.Controllers.Select(C => "/" + C.Route))}");
+            this.Self?.Update($"{this.Controllers.Count} {(this.Controllers.Count == 1 ? "endpoint controller" : "endpoint controllers")} initialized: {string.Join(", ", this.Controllers.Select(C => "/" + C.Route))}");
             new Task(() =>
             {
                 while (!this.StopServer)

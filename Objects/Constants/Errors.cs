@@ -1,4 +1,4 @@
-﻿using izolabella.Backend.REST.Objects.ErrorMessages.Base;
+﻿using izolabella.Backend.Objects.ErrorMessages.Base;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +6,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace izolabella.Backend.REST.Objects.Constants
+namespace izolabella.Backend.Objects.Constants
 {
     public static class Errors
     {

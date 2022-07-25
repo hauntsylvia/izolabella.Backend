@@ -6,7 +6,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace izolabella.Backend.REST.Objects.ErrorMessages.Base
+namespace izolabella.Backend.Objects.ErrorMessages.Base
 {
     [JsonObject(MemberSerialization.OptOut)]
     public class ErrorMessage
