@@ -257,7 +257,10 @@ namespace izolabella.Backend.Objects.Listeners
             new Task(() =>
             {
                 RequestTask.Wait();
-                this.CurrentRequests.Remove(RequestTask);
+                if(this.CurrentRequests.Any())
+                {
+                    this.CurrentRequests.Remove(RequestTask);
+                }
             }).Start();
             this.CurrentRequests.Add(RequestTask);
         }
