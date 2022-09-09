@@ -10,55 +10,54 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace izolabella.Backend.Objects.Structures.Controllers.Arguments
+namespace izolabella.Backend.Objects.Structures.Controllers.Arguments;
+
+public class IzolabellaControllerArgument
 {
-    public class IzolabellaControllerArgument
+    public IzolabellaControllerArgument(IzolabellaServer Server, IPEndPoint From, User? User, string? DefaultBody, object? Entity, HttpMethod Method, string WasInUri, Uri? UriSent)
     {
-        public IzolabellaControllerArgument(IzolabellaServer Server, IPEndPoint From, User? User, string? DefaultBody, object? Entity, HttpMethod Method, string WasInUri, Uri? UriSent)
+        this.Server = Server;
+        this.From = From;
+        this.User = User;
+        this.DefaultBody = DefaultBody;
+        this.Entity = Entity;
+        this.Method = Method;
+        this.WasInUri = WasInUri;
+        this.UriSent = UriSent;
+    }
+
+    public IzolabellaServer Server { get; }
+
+    public IPEndPoint From { get; }
+
+    public User? User { get; }
+
+    private string? DefaultBody { get; }
+
+    public object? Entity { get; }
+
+    public HttpMethod Method { get; }
+
+    public string WasInUri { get; }
+
+    public Uri? UriSent { get; }
+
+    public Task<bool> TryParseAsync<T>(out T? Result)
+    {
+        Result = JsonConvert.DeserializeObject<T>(this.DefaultBody ?? string.Empty);
+        return Task.FromResult(Result != null);
+    }
+
+    public bool TryParse<T>(out T? Result)
+    {
+        try
         {
-            this.Server = Server;
-            this.From = From;
-            this.User = User;
-            this.DefaultBody = DefaultBody;
-            this.Entity = Entity;
-            this.Method = Method;
-            this.WasInUri = WasInUri;
-            this.UriSent = UriSent;
+            Result = this.DefaultBody != null && this.DefaultBody.Length > 0 ? JsonConvert.DeserializeObject<T>(this.DefaultBody) : default;
         }
-
-        public IzolabellaServer Server { get; }
-
-        public IPEndPoint From { get; }
-
-        public User? User { get; }
-
-        private string? DefaultBody { get; }
-
-        public object? Entity { get; }
-
-        public HttpMethod Method { get; }
-
-        public string WasInUri { get; }
-
-        public Uri? UriSent { get; }
-
-        public Task<bool> TryParseAsync<T>(out T? Result)
+        catch
         {
-            Result = JsonConvert.DeserializeObject<T>(this.DefaultBody ?? string.Empty);
-            return Task.FromResult(Result != null);
+            Result = default;
         }
-
-        public bool TryParse<T>(out T? Result)
-        {
-            try
-            {
-                Result = this.DefaultBody != null && this.DefaultBody.Length > 0 ? JsonConvert.DeserializeObject<T>(this.DefaultBody) : default;
-            }
-            catch
-            {
-                Result = default;
-            }
-            return Result != null;
-        }
+        return Result != null;
     }
 }

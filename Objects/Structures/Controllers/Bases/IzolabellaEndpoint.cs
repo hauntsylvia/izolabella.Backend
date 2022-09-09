@@ -6,19 +6,18 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace izolabella.Backend.Objects.Structures.Controllers.Bases
+namespace izolabella.Backend.Objects.Structures.Controllers.Bases;
+
+public abstract class IzolabellaEndpoint
 {
-    public abstract class IzolabellaEndpoint
+    public abstract string Route { get; }
+
+    public virtual List<IzolabellaControllerParameter> Parameters { get; } = new();
+
+    public abstract Task<IzolabellaAPIControllerResult> RunAsync(IzolabellaControllerArgument Arguments);
+
+    public virtual Task OnErrorAsync(Exception Ex)
     {
-        public abstract string Route { get; }
-
-        public virtual List<IzolabellaControllerParameter> Parameters { get; } = new();
-
-        public abstract Task<IzolabellaAPIControllerResult> RunAsync(IzolabellaControllerArgument Arguments);
-
-        public virtual Task OnErrorAsync(Exception Ex)
-        {
-            return Task.CompletedTask;
-        }
+        return Task.CompletedTask;
     }
 }

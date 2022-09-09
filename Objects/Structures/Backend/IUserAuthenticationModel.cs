@@ -5,16 +5,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace izolabella.Backend.Objects.Structures.Backend
+namespace izolabella.Backend.Objects.Structures.Backend;
+
+public interface IUserAuthenticationModel
 {
-    public interface IUserAuthenticationModel
-    {
-        public Task<string?> GetSecretFromHeadersAsync(NameValueCollection Headers);
+    public Task<string?> GetSecretFromHeadersAsync(NameValueCollection Headers);
 
-        public Task<User> CreateNewUserAsync(string Secret);
+    public Task<User> CreateNewUserAsync(string Secret);
 
-        public Task<User?> AuthenticateUserAsync(string Secret);
+    public Task<User?> AuthenticateUserAsync(string Secret);
 
-        public bool CreateUserIfAuthNull { get; }
-    }
+    public bool CreateUserIfAuthNull { get; }
 }

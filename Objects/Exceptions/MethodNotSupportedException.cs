@@ -5,12 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace izolabella.Backend.Objects.Exceptions
+namespace izolabella.Backend.Objects.Exceptions;
+
+public class MethodNotSupportedException : IzolabellaServerException
 {
-    public class MethodNotSupportedException : IzolabellaServerException
+    public MethodNotSupportedException(string MethodFromClient) : base($"{MethodFromClient} is not a method supported by this server.")
     {
-        public MethodNotSupportedException(string MethodFromClient) : base($"{MethodFromClient} is not a method supported by this server.")
-        {
-        }
     }
 }
