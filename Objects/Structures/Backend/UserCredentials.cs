@@ -5,15 +5,16 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
-namespace izolabella.Backend.Objects.Structures.Backend;
-
-public class UserCredentials
+namespace izolabella.Backend.Objects.Structures.Backend
 {
-    public UserCredentials(string Secret)
+    public class UserCredentials
     {
-        this.Secret = Secret;
-    }
+        public UserCredentials(string Secret)
+        {
+            this.Secret = Secret;
+        }
 
-    [JsonProperty("Inner")]
-    public string Secret { get; }
+        [JsonProperty("Inner")]
+        public string Secret { get; }
+    }
 }

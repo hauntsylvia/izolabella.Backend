@@ -4,11 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace izolabella.Backend.Objects.Exceptions.Bases;
-
-public class IzolabellaServerException : Exception
+namespace izolabella.Backend.Objects.Exceptions.Bases
 {
-    public IzolabellaServerException(string Message) : base(Message)
+    public class IzolabellaServerException : Exception
     {
+        public IzolabellaServerException(string Message) : base(Message)
+        {
+        }
     }
 }

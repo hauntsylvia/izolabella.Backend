@@ -6,20 +6,21 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace izolabella.Backend.Objects.ErrorMessages.Base;
-
-[JsonObject(MemberSerialization.OptOut)]
-public class ErrorMessage
+namespace izolabella.Backend.Objects.ErrorMessages.Base
 {
-    public ErrorMessage(HttpStatusCode Code, string Message, string HelpfulDescription)
+    [JsonObject(MemberSerialization.OptOut)]
+    public class ErrorMessage
     {
-        this.Code = Code;
-        this.Message = Message;
-        this.HelpfulDescription = HelpfulDescription;
-    }
+        public ErrorMessage(HttpStatusCode Code, string Message, string HelpfulDescription)
+        {
+            this.Code = Code;
+            this.Message = Message;
+            this.HelpfulDescription = HelpfulDescription;
+        }
 
-    [JsonIgnore]
-    public HttpStatusCode Code { get; }
-    public string Message { get; }
-    public string HelpfulDescription { get; }
+        [JsonIgnore]
+        public HttpStatusCode Code { get; }
+        public string Message { get; }
+        public string HelpfulDescription { get; }
+    }
 }

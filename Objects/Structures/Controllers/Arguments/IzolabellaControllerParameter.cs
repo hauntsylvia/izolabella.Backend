@@ -5,20 +5,21 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace izolabella.Backend.Objects.Structures.Controllers.Arguments;
-
-public class IzolabellaControllerParameter
+namespace izolabella.Backend.Objects.Structures.Controllers.Arguments
 {
-    public IzolabellaControllerParameter(string Name, string Description, bool IsRequired)
+    public class IzolabellaControllerParameter
     {
-        this.Name = Name;
-        this.Description = Description;
-        this.IsRequired = IsRequired;
+        public IzolabellaControllerParameter(string Name, string Description, bool IsRequired)
+        {
+            this.Name = Name;
+            this.Description = Description;
+            this.IsRequired = IsRequired;
+        }
+
+        public string Name { get; }
+
+        public string Description { get; }
+
+        public bool IsRequired { get; }
     }
-
-    public string Name { get; }
-
-    public string Description { get; }
-
-    public bool IsRequired { get; }
 }

@@ -5,20 +5,21 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
-namespace izolabella.Backend.Objects.Structures.Backend;
-
-public class User
+namespace izolabella.Backend.Objects.Structures.Backend
 {
-    [JsonConstructor]
-    public User(string Id, UserCredentials Credentials)
+    public class User
     {
-        this.Id = Id;
-        this.Credentials = Credentials;
+        [JsonConstructor]
+        public User(string Id, UserCredentials Credentials)
+        {
+            this.Id = Id;
+            this.Credentials = Credentials;
+        }
+
+        [JsonProperty(nameof(Id))]
+        public virtual string Id { get; }
+
+        [JsonProperty("Secret")]
+        public UserCredentials Credentials { get; }
     }
-
-    [JsonProperty("Id")]
-    public virtual string Id { get; }
-
-    [JsonProperty("Secret")]
-    public UserCredentials Credentials { get; }
 }
